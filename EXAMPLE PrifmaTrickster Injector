@@ -1,0 +1,133 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading.Tasks;
+using System.IO;                
+
+namespace PrifmaTO_Launcher_2._0
+{
+    public static class DllInjector
+    {
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern IntPtr OpenProcess(ProcessAccessFlags dwAccess, bool inherited, int pid);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern IntPtr VirtualAllocEx(IntPtr hProc, IntPtr addr, uint size, AllocationType type, MemoryProtection prot);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern bool WriteProcessMemory(IntPtr hProc, IntPtr addr, byte[] buf, uint len, out UIntPtr written);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern IntPtr CreateRemoteThread(IntPtr hProc, IntPtr attr, uint stack, IntPtr fn, IntPtr param, uint flags, out IntPtr tid);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern IntPtr GetProcAddress(IntPtr module, string name);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern IntPtr GetModuleHandle(string moduleName);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern uint WaitForSingleObject(IntPtr h, uint ms);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern bool GetExitCodeThread(IntPtr h, out uint code);
+        [DllImport("kernel32.dll")]
+        static extern uint FormatMessage(uint flags, IntPtr src, uint msgId, uint langId, StringBuilder buf, uint bufSize, IntPtr args);
+
+        [Flags]
+        enum ProcessAccessFlags : uint
+        {
+            CreateThread = 0x0002,
+            QueryInformation = 0x0400,
+            VirtualMemoryOperation = 0x0008,
+            VirtualMemoryWrite = 0x0020,
+            VirtualMemoryRead = 0x0010,
+            All = CreateThread | QueryInformation | VirtualMemoryOperation | VirtualMemoryWrite | VirtualMemoryRead
+        }
+        enum AllocationType : uint { Commit = 0x1000 }
+        enum MemoryProtection : uint { ReadWrite = 0x04 }
+
+        static void Log(string msg)
+        {
+            var logPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "PTRPC_injector.log"
+            );
+            File.AppendAllText(logPath, $"{DateTime.Now:O}  {msg}\n");
+        }
+
+        static void LogLastError(string context)
+        {
+            int err = Marshal.GetLastWin32Error();
+            var sb = new StringBuilder(256);
+            FormatMessage(0x00001000, IntPtr.Zero, (uint)err, 0, sb, (uint)sb.Capacity, IntPtr.Zero);
+            Log($"{context} failed -> error {err}: {sb}");
+        }
+
+        public static bool Inject(string dllPath, Process target)
+        {
+            Log($"START Inject into PID={target.Id}, DLL=\"{dllPath}\"");
+            Log($"File.Exists(dllPath) = {File.Exists(dllPath)}");
+
+            var hProc = OpenProcess(ProcessAccessFlags.All, false, target.Id);
+            if (hProc == IntPtr.Zero) { LogLastError("OpenProcess"); return false; }
+
+            if (IsWow64Process(hProc, out bool isWow64))
+                Log($"IsWow64Process → target is {(isWow64 ? "32-bit (WOW64)" : "64-bit or 32-bit native")}");
+            else
+                LogLastError("IsWow64Process");
+
+            byte[] pathBytes = Encoding.ASCII.GetBytes(dllPath + '\0');
+            var alloc = VirtualAllocEx(hProc, IntPtr.Zero, (uint)pathBytes.Length,
+                                       AllocationType.Commit, MemoryProtection.ReadWrite);
+            if (alloc == IntPtr.Zero) { LogLastError("VirtualAllocEx"); return false; }
+            Log($"VirtualAllocEx → 0x{alloc.ToInt64():X}");
+
+            if (!WriteProcessMemory(hProc, alloc, pathBytes, (uint)pathBytes.Length, out _))
+            { LogLastError("WriteProcessMemory"); return false; }
+            Log($"WriteProcessMemory → wrote {pathBytes.Length} bytes");
+
+            // read it back just to verify
+            var buf = new byte[pathBytes.Length];
+            if (ReadProcessMemory(hProc, alloc, buf, (uint)buf.Length, out _))
+            {
+                var back = Encoding.ASCII.GetString(buf).TrimEnd('\0');
+                Log($"ReadProcessMemory → \"{back}\"");
+            }
+            else LogLastError("ReadProcessMemory");
+
+            var k32 = GetModuleHandle("kernel32.dll");
+            var loadAddr = (k32 != IntPtr.Zero)
+                ? GetProcAddress(k32, "LoadLibraryA")
+                : IntPtr.Zero;
+            if (loadAddr == IntPtr.Zero) { LogLastError("GetProcAddress(LoadLibraryA)"); return false; }
+            Log($"GetProcAddress(LoadLibraryA) → 0x{loadAddr.ToInt64():X}");
+
+            var hThread = CreateRemoteThread(hProc, IntPtr.Zero, 0, loadAddr, alloc, 0, out _);
+            if (hThread == IntPtr.Zero) { LogLastError("CreateRemoteThread"); return false; }
+            Log($"CreateRemoteThread → handle=0x{hThread.ToInt64():X}");
+
+            const uint WAIT_OBJECT_0 = 0x00000000;
+            if (WaitForSingleObject(hThread, 5000) != WAIT_OBJECT_0)
+            { LogLastError("WaitForSingleObject"); return false; }
+            Log("WaitForSingleObject → OK");
+
+            if (!GetExitCodeThread(hThread, out uint exitCode))
+            { LogLastError("GetExitCodeThread"); return false; }
+            Log($"GetExitCodeThread → exitCode=0x{exitCode:X}");
+            Log("FINAL → " + (exitCode != 0 ? "Success" : "Failure"));
+
+            return exitCode != 0;
+        }
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern bool IsWow64Process(IntPtr hProcess, out bool wow64);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern bool ReadProcessMemory(
+            IntPtr hProcess,
+            IntPtr lpBaseAddress,
+            [Out] byte[] lpBuffer,
+            uint size,
+            out UIntPtr lpNumberOfBytesRead
+        );
+
+    }
+
+}
