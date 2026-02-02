@@ -1,0 +1,78 @@
+// ===========================
+// Launch Game
+// ===========================
+private void LaunchGame()
+{
+    // No longer used ----v
+    /*
+    var serverVer = Updater.FetchServerClientVersion();
+    if (serverVer != null && serverVer != _localClientVersion)
+    {
+        System.Windows.MessageBox.Show("Client version changed since last game start, please update!");
+        EnableUpdateBtn();
+        return;
+    }
+    */
+
+    if (!File.Exists(_clientFileName))
+    {
+        Log.Write("Client file not found.");
+        System.Windows.MessageBox.Show("Error 501 : Client not found. Press OK to download again.",
+            "PrifmaTO Launcher");
+        setup.DownloadClient();
+        return;
+    }
+
+    // Launch
+
+    
+    Process gameClient = null;
+    try
+    {
+        gameClient = new Process
+        {
+        StartInfo =
+    {
+        FileName = _clientFileName,
+        UseShellExecute = false
+    }
+        };
+        gameClient.Start();
+        Log.Write("Successfully launched client.");
+    }
+    catch (Exception ex)
+    {
+        Log.Write("Unknown error while launching client: " + ex);
+        System.Windows.MessageBox.Show("Error 900 : Unable to launch client!");
+        return;
+    }
+
+    Thread.Sleep(500);
+
+    if (Properties.Settings.Default.DiscordRichPresense)
+    {
+        string dllFullPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "PTRPC.dll");
+        bool injected = DllInjector.Inject(dllFullPath, gameClient);
+        if (!injected)
+        {
+            Log.Write("DLL injection failed.");
+            System.Windows.MessageBox.Show("Failed to inject PTRPC.dll into the game. Rich Presence won’t work.");
+        }
+        else
+        {
+            Log.Write("DLL injection succeeded.");
+        }
+    }
+    string dll2FullPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "MSTLS.dll");
+    bool injected2 = DllInjector.Inject(dll2FullPath, gameClient);
+    if (!injected2)
+    {
+        Log.Write("DLL injection failed.");
+        System.Windows.MessageBox.Show("Failed to inject MSTLS.dll into the game. Secure MS will not work. Balance request will take a long time and fail. If this is an error, Please make sure no program uses the port 7463");
+    }
+    else
+    {
+        Log.Write("DLL injection succeeded.");
+    }
+    Close();
+}
