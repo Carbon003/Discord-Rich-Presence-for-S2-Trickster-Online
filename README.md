@@ -15,6 +15,23 @@
 
 ---
 
+## ⚙ How It Works
+
+- This project works by **reading values directly from the game client memory** where the information is stored.
+- **No data is required from the game server**.
+- When using multiple game clients at the same time, **only the first detected client will update Discord Rich Presence**.
+
+---
+
+## 🔄 Discord Handling
+
+- The program safely handles Discord being:
+  - Closed and reopened during gameplay
+  - Opened after the game has already started
+- Once Discord is detected, the Rich Presence status is automatically updated.
+
+---
+
 ## ⚠ Compatibility Notes
 
 - This project may require modifications to work with your own private server client (for example, memory pointers may differ).
