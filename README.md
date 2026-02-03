@@ -68,3 +68,5 @@ See the examples for intended use cases.
 - ❌ No donations accepted  
 - ❌ No resale permitted  
 - ✅ Free for learning and personal server projects  
+
+Please note : i am not an expert developper, cleaning the code, optimisation and checks may be needed, random garbage may have been left behind. I also have the bad habbit of barely adding comments to my code. 
