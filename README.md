@@ -1,9 +1,53 @@
-Features : Display status (login screen / in-game), character name, character job, character level, current map, plus a “general area” map image and a character job image. Please note that by default this was made for S2 game clients.
-May Need to be reworked to work on your own Private Server Clients
-You need to code an injector so the DLL is injected into the client, best way is to use a custom made game launcher
+# Trickster Rich Presence Client
 
+## ✨ Features
 
-For your own use, you might want to rename the project / files to something other than PTRPC (Prifma Trickster Rich Presence Client)
+- Displays player status (**Login Screen / In-Game**)
+- Shows:
+  - Character Name  
+  - Character Job  
+  - Character Level  
+  - Current Map  
+- Includes:
+  - A **general area map image**
+  - A **character job image**
+- Designed primarily for **S2 game clients**
 
+---
 
-This is provided free, as is. See Example for use cases. I accept no donation or resale of this work.
+## ⚠ Compatibility Notes
+
+- This project may require modifications to work with your own private server client (for example, memory pointers may differ).
+- You must create your own **DLL injector** to inject this library into the game client.
+  - The recommended approach is to use a **custom game launcher** for injection.
+
+---
+
+## 📝 Customization
+
+For personal use, it is recommended to rename the project and files to something other than:
+
+`PTRPC (Prifma Trickster Rich Presence Client)`
+
+This helps avoid confusion and keeps your implementation unique.
+
+---
+
+## 🖥 Architecture
+
+- **32-bit only** by default  
+  - Can be adapted for **64-bit** with changes
+- On my server:
+  - The launcher is **32-bit** for retro-compatibility  
+  - The DLL is also **32-bit**
+
+---
+
+## 📄 License & Usage
+
+This project is provided **free of charge** and **as-is**.  
+See the examples for intended use cases.
+
+- ❌ No donations accepted  
+- ❌ No resale permitted  
+- ✅ Free for learning and personal server projects  
