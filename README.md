@@ -70,3 +70,15 @@ See the examples for intended use cases.
 - ✅ Free for learning and personal server projects  
 
 Please note : i am not an expert developper, cleaning the code, optimisation and checks may be needed, random garbage may have been left behind. I also have the bad habbit of barely adding comments to my code. 
+
+## Disclaimer
+
+This project is free and publicly provided by me.
+
+I have been made aware that someone copied my work and resold it without permission. I do not authorize anyone to sell this code, claim it as their own, or resell “modified” versions of it as original work.
+
+If you paid for this code, or someone claimed they created it, you may have been scammed. The official version is available here for free.
+
+To know if your server’s Rich Presence is a fork or copy of mine, check the asset images. If the asset images are the same as the ones used in this project, then it was taken from my work.
+
+If this was provided to you for free, then all is good. My issue is not with people using it — it is with people taking free work, claiming ownership, and reselling it without permission.
